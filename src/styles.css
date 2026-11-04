@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fredoka", ui-rounded, "Nunito", sans-serif;
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+
+  --color-cream: #fff6ea;
+  --color-cream-deep: #f3e6d4;
+  --color-card: #fffdf8;
+  --color-ink: #2a2118;
+  --color-muted: #6e584c;
+  --color-line: #eadccb;
+  --color-teal: #0c6f5e;
+  --color-teal-deep: #084e43;
+  --color-gold: #e8a317;
+  --color-gold-deep: #a87408;
+  --color-stage: #1b2438;
+  --color-stage-2: #243049;
+  --color-stage-glow: #31466e;
+  --color-spot: #fff6ea;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-cream);
+    color: var(--color-ink);
+    min-height: 100dvh;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+}
+
+.stage-bg {
+  background-color: var(--color-stage);
+  background-image: radial-gradient(ellipse 90% 42% at 50% 0%, var(--color-stage-glow), transparent 68%);
+}
+
+.lift {
+  transform: translateY(0);
+  transition: transform 120ms ease;
+}
+
+.lift-teal {
+  box-shadow: 0 4px 0 0 var(--color-teal-deep);
+}
+.lift-gold {
+  box-shadow: 0 4px 0 0 var(--color-gold-deep);
+}
+.lift-ink {
+  box-shadow: 0 4px 0 0 var(--color-line);
+}
+
+.lift:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 0 transparent;
+}
+
+.lift:disabled {
+  opacity: 0.45;
+}
+
+@keyframes hop {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-8px) scale(1.06);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.hop {
+  animation: hop 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes shake {
+  20% {
+    transform: translateX(-5px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+
+.shake {
+  animation: shake 0.35s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lift,
+  .lift:active:not(:disabled) {
+    transition: none;
+    transform: none;
+  }
+  .hop,
+  .shake {
+    animation: none;
+  }
+}

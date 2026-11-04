@@ -1,0 +1,13 @@
+node_modules
+.vercel
+.output
+dist
+*.log
+screenshots
+artifacts
+.grok
+.DS_Store
+.env
+.env.*
+.tanstack
+*.tsbuildinfo
