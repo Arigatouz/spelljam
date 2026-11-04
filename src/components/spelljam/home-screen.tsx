@@ -37,7 +37,7 @@ export function HomeScreen({
     <Shell>
       <header className="flex items-center gap-3">
         <img
-          src="/art/mascot.jpg"
+          src={`${import.meta.env.BASE_URL}art/mascot.jpg`}
           alt="Spelljam bird in headphones"
           className="size-16 shrink-0 rounded-full border border-line object-cover"
         />
