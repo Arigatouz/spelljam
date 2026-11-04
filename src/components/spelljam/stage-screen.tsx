@@ -1,8 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Pause, Play } from "lucide-react";
 import type { Unit, WordItem } from "@/lib/spelljam/data";
 import type { StyleId } from "@/lib/spelljam/melody";
 import { playSong, stopPlayback } from "@/lib/spelljam/audio";
+import {
+  getVoiceLoad,
+  prepareSpokenWord,
+  subscribeVoiceLoad,
+  warmClearVoice,
+} from "@/lib/spelljam/kokoro";
 import { recordSong, setMusicOn, setStyle, setVoiceOn } from "@/lib/spelljam/store";
 import { tokenize } from "@/lib/spelljam/words";
 import { cn } from "@/lib/cn";
@@ -44,6 +50,12 @@ export function StageScreen({
   const [wordHot, setWordHot] = useState(false);
   const alive = useRef(true);
   const finished = useRef(false);
+  const voiceLoad = useSyncExternalStore(subscribeVoiceLoad, getVoiceLoad, getVoiceLoad);
+
+  useEffect(() => {
+    warmClearVoice();
+    prepareSpokenWord(word.word);
+  }, [word.word]);
 
   useEffect(() => {
     alive.current = true;
@@ -161,6 +173,12 @@ export function StageScreen({
       <p className="mt-3 h-6 text-center text-sm font-extrabold text-gold" aria-live="polite">
         {caption}
       </p>
+      {voiceLoad.state === "loading" ? (
+        <p className="text-center text-xs font-semibold text-spot">
+          Getting a clearer voice
+          {voiceLoad.progress > 0 ? ` ${Math.round(voiceLoad.progress)}%` : "…"}
+        </p>
+      ) : null}
 
       <div className="mt-auto flex flex-col items-center gap-4 pt-6">
         <StylePicker value={style} onChange={pickStyle} onStage />

@@ -1,4 +1,5 @@
 import { composeSong, type SongChart, type SongEvent, type StyleId } from "./melody";
+import { prepareSpokenWord, spokenClip } from "./kokoro";
 
 type Hooks = {
   onEvent?: (event: SongEvent) => void;
@@ -206,6 +207,39 @@ function clap(audio: AudioContext, dest: AudioNode, when: number, peak: number) 
   track(src);
 }
 
+function playClip(samples: Float32Array, rate: number, when: number, slotSec: number) {
+  const audio = ctx;
+  const dest = musicBus;
+  if (!audio || !dest || samples.length === 0 || rate <= 0) return;
+  const buffer = audio.createBuffer(1, samples.length, rate);
+  buffer.getChannelData(0).set(samples);
+  const src = audio.createBufferSource();
+  src.buffer = buffer;
+  const natural = samples.length / rate;
+  src.playbackRate.value = natural > slotSec ? Math.min(1.2, natural / Math.max(0.4, slotSec)) : 1;
+  const dur = natural / src.playbackRate.value;
+  const fade = Math.min(0.08, dur * 0.25);
+  const g = audio.createGain();
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(0.9, when + fade);
+  if (dur > fade * 2) g.gain.setValueAtTime(0.9, when + dur - fade);
+  g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+  src.connect(g);
+  g.connect(dest);
+  src.start(when);
+  src.stop(when + dur + 0.02);
+  track(src);
+}
+
+function sayWord(text: string, midi: number, slotSec: number) {
+  const clip = spokenClip(text);
+  if (clip && ctx) {
+    playClip(clip.samples, clip.rate, ctx.currentTime + 0.02, slotSec);
+    return;
+  }
+  speak(text, midi, slotSec);
+}
+
 function speak(text: string, midi: number, durSec: number) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   try {
@@ -304,7 +338,9 @@ function arm(
       window.setTimeout(() => {
         if (stopped) return;
         hooks.onEvent?.(ev);
-        if (voice && ev.say) speak(ev.say, ev.midi, ev.dur * beatSec);
+        if (!voice || !ev.say) return;
+        if (ev.role === "word") sayWord(ev.say, ev.midi, ev.dur * beatSec);
+        else speak(ev.say, ev.midi, ev.dur * beatSec);
       }, delay),
     );
   }
@@ -344,6 +380,7 @@ export function playSong(
   unlockAudio();
   stopPlayback();
   const chart = composeSong(raw, styleId, opts.slow);
+  if (opts.voice) prepareSpokenWord(raw);
   if (chart.events.length === 0) {
     hooks.onEnd?.();
     return;
@@ -367,7 +404,8 @@ export function playWord(raw: string) {
   stopPlayback();
   const word = raw.trim();
   if (!word) return;
-  speak(word, 67, 1.1);
+  prepareSpokenWord(word);
+  sayWord(word, 67, 1.2);
   const audio = ctx;
   const dest = musicBus;
   if (!audio || !dest) return;

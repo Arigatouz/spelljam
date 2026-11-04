@@ -1,8 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Volume2 } from "lucide-react";
 import type { WordItem } from "@/lib/spelljam/data";
 import { letterMidi, type StyleId } from "@/lib/spelljam/melody";
 import { playBuzz, playFanfare, playNote, playSong, playWord, stopPlayback } from "@/lib/spelljam/audio";
+import {
+  getVoiceLoad,
+  prepareSpokenWord,
+  subscribeVoiceLoad,
+  warmClearVoice,
+} from "@/lib/spelljam/kokoro";
 import { recordQuiz } from "@/lib/spelljam/store";
 import { makeBank, tokenize, type BankTile } from "@/lib/spelljam/words";
 import { cn } from "@/lib/cn";
@@ -55,6 +61,12 @@ export function QuizScreen({
   const [stars, setStars] = useState<number | null>(null);
   const saved = useRef(false);
   const alive = useRef(true);
+  const voiceLoad = useSyncExternalStore(subscribeVoiceLoad, getVoiceLoad, getVoiceLoad);
+
+  useEffect(() => {
+    warmClearVoice();
+    prepareSpokenWord(word.word);
+  }, [word.word]);
 
   useEffect(() => {
     alive.current = true;
@@ -250,6 +262,12 @@ export function QuizScreen({
             >
               {listening ? "Listening…" : "Stuck? Hear the spelling"}
             </button>
+            {voiceLoad.state === "loading" ? (
+              <p className="text-center text-xs font-semibold text-muted">
+                Getting a clearer voice
+                {voiceLoad.progress > 0 ? ` ${Math.round(voiceLoad.progress)}%` : "…"}
+              </p>
+            ) : null}
           </div>
         </>
       )}
