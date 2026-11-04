@@ -5,8 +5,9 @@ import type { StyleId } from "@/lib/spelljam/melody";
 import { playSong, stopPlayback } from "@/lib/spelljam/audio";
 import {
   getVoiceLoad,
-  prepareSpokenWord,
+  prepareVoice,
   subscribeVoiceLoad,
+  voiceStatusText,
   warmClearVoice,
 } from "@/lib/spelljam/kokoro";
 import { recordSong, setMusicOn, setStyle, setVoiceOn } from "@/lib/spelljam/store";
@@ -50,11 +51,12 @@ export function StageScreen({
   const [wordHot, setWordHot] = useState(false);
   const alive = useRef(true);
   const finished = useRef(false);
-  const voiceLoad = useSyncExternalStore(subscribeVoiceLoad, getVoiceLoad, getVoiceLoad);
+  useSyncExternalStore(subscribeVoiceLoad, getVoiceLoad, getVoiceLoad);
+  const voiceNote = voiceStatusText();
 
   useEffect(() => {
     warmClearVoice();
-    prepareSpokenWord(word.word);
+    prepareVoice(word.word);
   }, [word.word]);
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export function StageScreen({
   function start() {
     finished.current = false;
     setPlaying(true);
-    setCaption(slow ? "Slow and clear" : "Find the beat");
+    setCaption(voiceOn ? "Getting the voice" : slow ? "Slow and clear" : "Find the beat");
     playSong(word.word, style, { slow, voice: voiceOn, music: musicOn }, {
       onEvent: (ev) => {
         if (!alive.current) return;
@@ -173,12 +175,7 @@ export function StageScreen({
       <p className="mt-3 h-6 text-center text-sm font-extrabold text-gold" aria-live="polite">
         {caption}
       </p>
-      {voiceLoad.state === "loading" ? (
-        <p className="text-center text-xs font-semibold text-spot">
-          Getting a clearer voice
-          {voiceLoad.progress > 0 ? ` ${Math.round(voiceLoad.progress)}%` : "…"}
-        </p>
-      ) : null}
+      {voiceNote ? <p className="text-center text-xs font-semibold text-spot">{voiceNote}</p> : null}
 
       <div className="mt-auto flex flex-col items-center gap-4 pt-6">
         <StylePicker value={style} onChange={pickStyle} onStage />

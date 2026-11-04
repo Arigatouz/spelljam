@@ -47,6 +47,42 @@ export function tokenize(raw: string): SpellToken[] {
   return out;
 }
 
+const LETTER_NAMES: Record<string, string> = {
+  a: "ay",
+  b: "bee",
+  c: "see",
+  d: "dee",
+  e: "ee",
+  f: "eff",
+  g: "jee",
+  h: "aitch",
+  i: "eye",
+  j: "jay",
+  k: "kay",
+  l: "ell",
+  m: "em",
+  n: "en",
+  o: "oh",
+  p: "pee",
+  q: "cue",
+  r: "are",
+  s: "ess",
+  t: "tee",
+  u: "you",
+  v: "vee",
+  w: "double you",
+  x: "ex",
+  y: "why",
+  z: "zee",
+};
+
+/** How a letter is spoken, so a voice model says the name and not a grunt. */
+export function letterName(ch: string): string {
+  const key = ch.trim().toLowerCase();
+  if (key === "double u" || key === "w") return "double you";
+  return LETTER_NAMES[key] ?? ch.trim();
+}
+
 export function lettersOnly(raw: string): string {
   return tokenize(raw)
     .filter((t) => t.say)

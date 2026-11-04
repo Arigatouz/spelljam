@@ -1,5 +1,5 @@
 import { composeSong, type SongChart, type SongEvent, type StyleId } from "./melody";
-import { prepareSpokenWord, spokenClip } from "./kokoro";
+import { clipKey, prepareVoice, spokenClip, waitForVoice } from "./kokoro";
 
 type Hooks = {
   onEvent?: (event: SongEvent) => void;
@@ -231,13 +231,13 @@ function playClip(samples: Float32Array, rate: number, when: number, slotSec: nu
   track(src);
 }
 
-function sayWord(text: string, midi: number, slotSec: number) {
-  const clip = spokenClip(text);
+function sayLine(role: "word" | "letter", say: string, midi: number, slotSec: number) {
+  const clip = spokenClip(clipKey(role, say));
   if (clip && ctx) {
     playClip(clip.samples, clip.rate, ctx.currentTime + 0.02, slotSec);
     return;
   }
-  speak(text, midi, slotSec);
+  speak(say, midi, slotSec);
 }
 
 function speak(text: string, midi: number, durSec: number) {
@@ -339,8 +339,9 @@ function arm(
         if (stopped) return;
         hooks.onEvent?.(ev);
         if (!voice || !ev.say) return;
-        if (ev.role === "word") sayWord(ev.say, ev.midi, ev.dur * beatSec);
-        else speak(ev.say, ev.midi, ev.dur * beatSec);
+        const slot = ev.dur * beatSec;
+        if (ev.role === "word") sayLine("word", ev.say, ev.midi, slot);
+        else if (ev.role === "letter") sayLine("letter", ev.say, ev.midi, slot);
       }, delay),
     );
   }
@@ -380,23 +381,38 @@ export function playSong(
   unlockAudio();
   stopPlayback();
   const chart = composeSong(raw, styleId, opts.slow);
-  if (opts.voice) prepareSpokenWord(raw);
   if (chart.events.length === 0) {
     hooks.onEnd?.();
     return;
   }
-  try {
-    currentStop = arm(chart, styleId, opts.voice, opts.music, {
-      onEvent: hooks.onEvent,
-      onEnd: () => {
-        currentStop = null;
-        hooks.onEnd?.();
-      },
-    });
-  } catch {
-    currentStop = null;
-    hooks.onEnd?.();
-  }
+  let cancelled = false;
+  currentStop = () => {
+    cancelled = true;
+  };
+  void (async () => {
+    if (opts.voice) {
+      prepareVoice(raw);
+      await waitForVoice(raw, "spelling");
+    }
+    if (cancelled) return;
+    try {
+      const stop = arm(chart, styleId, opts.voice, opts.music, {
+        onEvent: hooks.onEvent,
+        onEnd: () => {
+          currentStop = null;
+          hooks.onEnd?.();
+        },
+      });
+      if (cancelled) {
+        stop();
+        return;
+      }
+      currentStop = stop;
+    } catch {
+      currentStop = null;
+      hooks.onEnd?.();
+    }
+  })();
 }
 
 export function playWord(raw: string) {
@@ -404,15 +420,23 @@ export function playWord(raw: string) {
   stopPlayback();
   const word = raw.trim();
   if (!word) return;
-  prepareSpokenWord(word);
-  sayWord(word, 67, 1.2);
-  const audio = ctx;
-  const dest = musicBus;
-  if (!audio || !dest) return;
-  const when = audio.currentTime + 0.02;
-  [0, 4, 7].forEach((semi, i) => {
-    tone(audio, dest, when + i * 0.08, 60 + semi, 0.2, "triangle", 0.1, false);
-  });
+  let cancelled = false;
+  currentStop = () => {
+    cancelled = true;
+  };
+  void (async () => {
+    prepareVoice(word);
+    await waitForVoice(word, "word");
+    if (cancelled) return;
+    sayLine("word", word, 67, 1.2);
+    const audio = ctx;
+    const dest = musicBus;
+    if (!audio || !dest) return;
+    const when = audio.currentTime + 0.02;
+    [0, 4, 7].forEach((semi, i) => {
+      tone(audio, dest, when + i * 0.08, 60 + semi, 0.2, "triangle", 0.1, false);
+    });
+  })();
 }
 
 export function playNote(midi: number) {

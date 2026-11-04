@@ -5,8 +5,9 @@ import { letterMidi, type StyleId } from "@/lib/spelljam/melody";
 import { playBuzz, playFanfare, playNote, playSong, playWord, stopPlayback } from "@/lib/spelljam/audio";
 import {
   getVoiceLoad,
-  prepareSpokenWord,
+  prepareVoice,
   subscribeVoiceLoad,
+  voiceStatusText,
   warmClearVoice,
 } from "@/lib/spelljam/kokoro";
 import { recordQuiz } from "@/lib/spelljam/store";
@@ -61,11 +62,12 @@ export function QuizScreen({
   const [stars, setStars] = useState<number | null>(null);
   const saved = useRef(false);
   const alive = useRef(true);
-  const voiceLoad = useSyncExternalStore(subscribeVoiceLoad, getVoiceLoad, getVoiceLoad);
+  useSyncExternalStore(subscribeVoiceLoad, getVoiceLoad, getVoiceLoad);
+  const voiceNote = voiceStatusText();
 
   useEffect(() => {
     warmClearVoice();
-    prepareSpokenWord(word.word);
+    prepareVoice(word.word);
   }, [word.word]);
 
   useEffect(() => {
@@ -262,12 +264,7 @@ export function QuizScreen({
             >
               {listening ? "Listening…" : "Stuck? Hear the spelling"}
             </button>
-            {voiceLoad.state === "loading" ? (
-              <p className="text-center text-xs font-semibold text-muted">
-                Getting a clearer voice
-                {voiceLoad.progress > 0 ? ` ${Math.round(voiceLoad.progress)}%` : "…"}
-              </p>
-            ) : null}
+            {voiceNote ? <p className="text-center text-xs font-semibold text-muted">{voiceNote}</p> : null}
           </div>
         </>
       )}
