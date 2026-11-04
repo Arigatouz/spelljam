@@ -49,16 +49,24 @@ function getCtx(): AudioContext | null {
   return ctx;
 }
 
+function voiceScore(voice: SpeechSynthesisVoice): number {
+  const name = voice.name.toLowerCase();
+  const lang = voice.lang.toLowerCase();
+  let score = lang.startsWith("en") ? 20 : 0;
+  if (lang === "en-us" || lang === "en-gb") score += 6;
+  // Device neural voices (Google, Apple, Microsoft) sound much closer to a person than the compact ones.
+  if (/natural|neural|premium|enhanced|wavenet/.test(name)) score += 50;
+  if (/google/.test(name) && /english/.test(name)) score += 30;
+  if (/samantha|karen|moira|serena|aria|jenny|libby|sonia/.test(name)) score += 18;
+  if (/compact|espeak/.test(name)) score -= 20;
+  return score;
+}
+
 function pickVoice(): SpeechSynthesisVoice | null {
   if (typeof window === "undefined" || !window.speechSynthesis) return null;
   const voices = window.speechSynthesis.getVoices();
   if (voices.length === 0) return voicePick;
-  const en = voices.filter((v) => v.lang.toLowerCase().startsWith("en"));
-  voicePick =
-    en.find((v) => /samantha|google uk english female|karen|moira|serena|female/i.test(v.name)) ??
-    en[0] ??
-    voices[0] ??
-    null;
+  voicePick = [...voices].sort((a, b) => voiceScore(b) - voiceScore(a))[0] ?? null;
   return voicePick;
 }
 
