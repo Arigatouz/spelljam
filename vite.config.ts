@@ -151,6 +151,7 @@ const pages = process.env.GITHUB_PAGES === "1";
 
 export default defineConfig(({ command, isPreview }) => ({
   base: pages ? "/spelljam/" : "/",
+  worker: { format: "es" },
   server: {
     host: "0.0.0.0",
     port: 8080,
